@@ -1,1 +1,1 @@
-# leran-node
+# learn-node
