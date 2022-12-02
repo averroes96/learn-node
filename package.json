@@ -1,0 +1,33 @@
+{
+  "name": "learn-node",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index",
+    "dev": "nodemon index",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/averroes96/learn-node.git"
+  },
+  "keywords": [
+    "nodejs",
+    "javascript",
+    "expressjs"
+  ],
+  "author": "averroes96",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/averroes96/learn-node/issues"
+  },
+  "homepage": "https://github.com/averroes96/learn-node#readme",
+  "dependencies": {
+    "date-fns": "^2.29.3",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.20"
+  }
+}
