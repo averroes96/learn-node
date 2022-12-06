@@ -10,11 +10,34 @@ class Emitter extends EventEmitter {}
 
 const myEmitter = new Emitter()
 
-myEmitter.on("log", (message) => logEvent(message))
+myEmitter.on("log", (message, fileName) => logEvent(message, fileName))
 
 const PORT = process.env.PORT || 3500
+
+const serveFile = async (filePath, contentType, response) => {
+    try {
+        const rawData = await fsPromises.readFile(
+            filePath, 
+            !contentType.includes("image") ? "utf-8" : ""
+        )
+        const data = contentType == "application/json" ? JSON.parse(rawData) : rawData
+        response.writeHead(filePath.includes("404.html") ? 404 : 200, {
+        "Content-Type": contentType
+        })
+        response.end(contentType == "application/json" ? JSON.stringify(data) : data)
+    
+    } catch (error) {
+        console.error(error);
+        myEmitter.emit("log", `${error.name}: ${error.message}`, "errorLogs.txt")
+
+        response.statusCode = 500
+        response.end()
+    }
+}
+
 const server = http.createServer((request, response) => {
     console.log(request.method, request.url)
+    myEmitter.emit("log", `${request.method}: ${request.url}`, "requestLogs.txt")
 
     let filePath
     let contentType
@@ -64,7 +87,7 @@ const server = http.createServer((request, response) => {
     const fileExists = fs.existsSync(filePath)
 
     if (fileExists) {
-
+        serveFile(filePath, contentType, response)
     }
     else {
         switch (path.parse(filePath).base) {
@@ -81,41 +104,13 @@ const server = http.createServer((request, response) => {
                 response.end()
                 break;
             default:
-                response.writeHead(301, {
-                    "location": "/404.html"
-                })
-                response.end()
+                serveFile(path.join(__dirname, "views", "404.html"), contentType, response)
                 break;
         }
         console.log(path.parse(filePath))
     }
-
-    // switch (request.url) {
-    //     case "/":
-    //     case "/index.html":
-    //         response.statusCode = 200
-    //         response.setHeader("Content-Type", "text/html")
-    //         filePath = path.join(__dirname, "views", "index.html")
-    //         fs.readFile(filePath, encoding="utf-8", (err, data) => {
-    //             if (err) throw err
-    //             response.end(data)
-    //         })
-    //         break;
-    
-    //     default:
-    //         response.statusCode = 404
-    //         response.setHeader("Content-Type", "text/html")
-    //         filePath = path.join(__dirname, "views", "404.html")
-    //         fs.readFile(filePath, encoding="utf-8", (err, data) => {
-    //             if (err) throw err
-    //             response.end(data)
-    //         })
-    //         break;
-    // }
 })
 
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}...`);
 })
-
-
