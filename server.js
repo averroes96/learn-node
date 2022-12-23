@@ -24,6 +24,7 @@ app.use("/subdir", require("./routes/subdir"))
 app.use("/subdir", express.static(path.join(__dirname, "/public")))
 
 app.use("/employees", require("./routes/api/employees"))
+app.use("/users", require("./routes/api/users"))
 
 // Route chaining
 const one = (req, res, next) => {
