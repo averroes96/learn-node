@@ -45,4 +45,22 @@ const create = async (req, res) => {
     }
 }
 
-module.exports = { create }
+const login = async (req, res) => {
+    const { username, password } = req.body
+
+    if (!username || !password) {
+        return res.status(400).json({"detail": "username, password are required."})
+    }
+
+    const user = users.data.find((user) => user.username == username)
+
+    if (!user) return res.sendStatus(401)
+
+    aMatch = await bcrypt.compare(password, user.password)
+
+    if (!aMatch) return res.sendStatus(401)
+
+    res.json(user)
+}
+
+module.exports = { create, login }
