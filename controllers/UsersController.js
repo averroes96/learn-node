@@ -1,6 +1,8 @@
 const fsPromises = require("fs/promises")
 const path = require("path")
 const bcrypt = require("bcrypt")
+const jwt = require("jsonwebtoken")
+const dotenv = require("dotenv/config")
 
 const users = {
     data: require("../models/users.json"),
@@ -60,7 +62,33 @@ const login = async (req, res) => {
 
     if (!aMatch) return res.sendStatus(401)
 
-    res.json(user)
+    const accessToken = jwt.sign(
+        payload={"username": user.username},
+        secretOrPrivateKey=process.env.ACCESS_TOKEN_SECRET,
+        {
+            expiresIn: "30s"
+        }
+    )
+
+    const refreshToken = jwt.sign(
+        payload={"username": user.username},
+        secretOrPrivateKey=process.env.REFRESH_TOKEN_SECRET,
+        {
+            expiresIn: "1d"
+        }
+    )
+
+    const otherUsers = users.data.filter((other) => other.username != user.username)
+    const userWithRefreshToken = {...user, refreshToken}
+
+    users.setUsers([...otherUsers, userWithRefreshToken])
+    await fsPromises.writeFile(
+        path.join(__dirname, "..", "models", "users.json"),
+        JSON.stringify(users.data)
+    )
+    
+    res.cookie("jwt", refreshToken, {httpOnly: true, maxAge: 24 * 60 * 60 * 1000})
+    res.json({...user, accessToken})
 }
 
 module.exports = { create, login }
