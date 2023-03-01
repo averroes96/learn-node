@@ -2,7 +2,8 @@ const fsPromises = require("fs/promises")
 const path = require("path")
 const bcrypt = require("bcrypt")
 const jwt = require("jsonwebtoken")
-const dotenv = require("dotenv/config")
+
+require("dotenv/config")
 
 const users = {
     data: require("../models/users.json"),
@@ -87,8 +88,72 @@ const login = async (req, res) => {
         JSON.stringify(users.data)
     )
     
-    res.cookie("jwt", refreshToken, {httpOnly: true, maxAge: 24 * 60 * 60 * 1000})
+    res.cookie("jwt", refreshToken, {httpOnly: true, maxAge: 24 * 60 * 60 * 1000, secure: true, sameSite: 'None'})
     res.json({...user, accessToken})
 }
 
-module.exports = { create, login }
+function refreshToken(req, res) {
+    const cookies = req.cookies
+
+    if (!cookies?.jwt) return res.sendStatus(401) // unauthorized
+
+    const refreshToken = cookies.jwt
+
+    const user = users.data.find((user) => user.refreshToken == refreshToken)
+
+    if (!user) return res.sendStatus(403) // forbidden
+
+    jwt.verify(
+        refreshToken,
+        process.env.REFRESH_TOKEN_SECRET,
+        (err, decoded) => {
+            if (err || decoded.username != user.username) return res.sendStatus(403)
+            const accessToken = jwt.sign(
+                {'username': decoded.username},
+                process.env.ACCESS_TOKEN_SECRET,
+                {
+                    'expiresIn': '30s'
+                }
+            )
+            res.json({'accessToken': accessToken})
+        }
+    )
+}
+
+const logout = async (req, res) => {
+    const cookies = req.cookies
+
+    if (!cookies?.jwt) return res.sendStatus(204) // no content
+
+    const refreshToken = cookies.jwt
+    const user = users.data.find((user) => user.refreshToken == refreshToken)
+
+    if (!user){
+        res.clearCookie('jwt', {
+            httpOnly: true,
+            sameSite: 'None',
+            secure: true
+        })
+        
+        return res.sendStatus(204)
+    }
+
+    const otherUsers = users.data.filter((other) => other.refreshToken != user.refreshToken)
+    const user_payload = {...user, refreshToken: ''}
+    users.setUsers([...otherUsers, user_payload])
+
+    await fsPromises.writeFile(
+        path.join(__dirname, "..", "models", "users.json"),
+        JSON.stringify(users.data)
+    )
+
+    res.clearCookie('jwt', {
+        httpOnly: true,
+        sameSite: 'None',
+        secure: true
+    })
+
+    return res.sendStatus(204) // no content
+}
+
+module.exports = { create, login, refreshToken, logout }

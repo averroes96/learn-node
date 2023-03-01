@@ -1,7 +1,12 @@
 const path = require("path")
 const express = require("express")
 const cors  = require("cors")
-const corsOptions = require("./config/cors/options")
+const { corsOptions } = require("./config/cors").corsOptions
+const credentials = require("./middleware/credentials")
+
+const jwtMiddleware = require("./middleware/JWTMiddleware")
+
+const cookieParser = require('cookie-parser')
 
 const { logger } = require("./middleware/logEvents")
 const errorHandler = require("./middleware/errorHandler")
@@ -11,11 +16,12 @@ const app = express()
 
 app.use(logger)
 
-
+app.use(credentials)
 app.use(cors(corsOptions))
 
 app.use(express.urlencoded({extended: false}))
 app.use(express.json())
+app.use(cookieParser())
 
 app.use("/", require("./routes/root"))
 app.use("/", express.static(path.join(__dirname, "/public")))
@@ -23,8 +29,10 @@ app.use("/", express.static(path.join(__dirname, "/public")))
 app.use("/subdir", require("./routes/subdir"))
 app.use("/subdir", express.static(path.join(__dirname, "/public")))
 
-app.use("/employees", require("./routes/api/employees"))
 app.use("/users", require("./routes/api/users"))
+
+app.use(jwtMiddleware.verify)
+app.use("/employees", require("./routes/api/employees"))
 
 // Route chaining
 const one = (req, res, next) => {
