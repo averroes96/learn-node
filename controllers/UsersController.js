@@ -3,6 +3,8 @@ const path = require("path")
 const bcrypt = require("bcrypt")
 const jwt = require("jsonwebtoken")
 
+const roles = require('../config/roles')
+
 require("dotenv/config")
 
 const users = {
@@ -35,6 +37,7 @@ const create = async (req, res) => {
             "fullName": fullname,
             "email": email,
             "gender": gender,
+            "roles": { 'User': roles.User}
         }
 
         users.setUsers([...users.data, newUser])
@@ -64,7 +67,12 @@ const login = async (req, res) => {
     if (!aMatch) return res.sendStatus(401)
 
     const accessToken = jwt.sign(
-        payload={"username": user.username},
+        payload={
+            'UserInfo': {
+                "username": user.username,
+                "roles": Object.values(user.roles)
+            }
+        },
         secretOrPrivateKey=process.env.ACCESS_TOKEN_SECRET,
         {
             expiresIn: "30s"
@@ -109,7 +117,12 @@ function refreshToken(req, res) {
         (err, decoded) => {
             if (err || decoded.username != user.username) return res.sendStatus(403)
             const accessToken = jwt.sign(
-                {'username': decoded.username},
+                {
+                    'UserInfo': {
+                        "username": user.username,
+                        "roles": Object.values(user.roles)
+                    }
+                },
                 process.env.ACCESS_TOKEN_SECRET,
                 {
                     'expiresIn': '30s'
