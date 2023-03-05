@@ -8,11 +8,10 @@ const verify = (request, response, next) => {
     
     token = authorization.split(" ")[1]
     jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (error, decoded) => {
-        console.log(error)
         if (error) return response.sendStatus(403)
         
         request.user = decoded.UserInfo.username
-        request.roles = decoded.UserInfo.roles
+        request.perms = decoded.UserInfo.permissions
         next()
     })
 }

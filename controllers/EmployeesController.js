@@ -55,7 +55,7 @@ const retrieve = (req, res) => {
             "detail": "employee not found."
         })
     }
-    res.json(empoyee)
+    res.json(employee)
 }
 
 module.exports = {list, retrieve, create, update, remove}

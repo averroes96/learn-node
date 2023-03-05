@@ -3,7 +3,7 @@ const path = require("path")
 const bcrypt = require("bcrypt")
 const jwt = require("jsonwebtoken")
 
-const roles = require('../config/roles')
+const permissions = require('../config/permissions')
 
 require("dotenv/config")
 
@@ -37,7 +37,7 @@ const create = async (req, res) => {
             "fullName": fullname,
             "email": email,
             "gender": gender,
-            "roles": { 'User': roles.User}
+            "permissions": { 'User': permissions.User}
         }
 
         users.setUsers([...users.data, newUser])
@@ -70,7 +70,7 @@ const login = async (req, res) => {
         payload={
             'UserInfo': {
                 "username": user.username,
-                "roles": Object.values(user.roles)
+                "permissions": Object.values(user.permissions)
             }
         },
         secretOrPrivateKey=process.env.ACCESS_TOKEN_SECRET,
@@ -120,7 +120,7 @@ function refreshToken(req, res) {
                 {
                     'UserInfo': {
                         "username": user.username,
-                        "roles": Object.values(user.roles)
+                        "permissions": Object.values(user.permissions)
                     }
                 },
                 process.env.ACCESS_TOKEN_SECRET,
