@@ -5,8 +5,6 @@ const jwt = require("jsonwebtoken")
 
 const permissions = require('../config/permissions')
 
-require("dotenv/config")
-
 const users = {
     data: require("../models/users.json"),
     setUsers: function(data) {
