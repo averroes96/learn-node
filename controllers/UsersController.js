@@ -1,5 +1,4 @@
-const fsPromises = require("fs/promises")
-const path = require("path")
+const User = require('../models/User')
 const bcrypt = require("bcrypt")
 const jwt = require("jsonwebtoken")
 
@@ -19,9 +18,7 @@ const create = async (req, res) => {
         return res.status(400).json({"detail": "username, password and fullname must be set"})
     }
 
-    const usernameExists = users.data.find((user) => user.username == username)
-
-    console.log(usernameExists)
+    const usernameExists = await User.findOne({username: username}).exec()
 
     if (usernameExists) {
         return res.sendStatus(409)
@@ -29,21 +26,17 @@ const create = async (req, res) => {
 
     try {
         const hashedPassword = await bcrypt.hash(password, 10)
-        const newUser = {
+        const result = await User.create({
             "username": username,
             "password": hashedPassword,
             "fullName": fullname,
             "email": email,
-            "gender": gender,
-            "permissions": { 'User': permissions.User}
-        }
+            "gender": gender
+        })
 
-        users.setUsers([...users.data, newUser])
-        await fsPromises.writeFile(
-            path.join(__dirname, "..", "models", "users.json"),
-            JSON.stringify(users.data)
-        )
-        res.status(201).json(newUser)
+        console.log(result);
+
+        res.status(201).json(result)
     } catch (err) {
         res.status(500).json({"Unexpected error": err.message})
     }
