@@ -1,11 +1,17 @@
-let employees = require("../models/employees.json")
+const Employee = require('../models/Employee')
 
-const list = (req, res) => {
+const list = async (req, res) => {
+    const employees = await Employee.find()
+
+    if (!employees) return res.status(204).json({
+        'detail': 'no employee was found!'
+    })
+
     res.json(employees)
 }
 
-const create = (req, res) => {
-    const employee = {
+const create = async (req, res) => {
+    /*const employee = {
         id: employees[employees.length - 1].id + 1 || 1,
         first_name: req.body.first_name,
         last_name: req.body.last_name
@@ -19,42 +25,77 @@ const create = (req, res) => {
 
     employees.push(employee)
     res.status(201).json(employees.at(position - 1))
+    */
+
+    if (!req?.body?.firstName || !req?.body?.lastName) {
+        return res.status(400).json({
+            "detail": "first and last name must be set"
+        })
+    }
+
+    try {
+        const employee = await Employee.create({
+            firstName: req.body.firstName,
+            lastName: req.body.lastName
+        })
+
+        res.status(201).json(employee)
+    } catch (err){
+        console.error(err)
+    }
+
 }
 
-const update = (req, res) => {
-    const employee = employees.find((employee) => employee.id == parseInt(req.params.id))
+const update = async (req, res) => {
+    if(!req?.params?.id) return res.status(400).json({
+        'detail': 'id must be set.'
+    })
+
+    const employee = await Employee.findOne({ _id : req.params.id }).exec()
+
+    if (!employee) {
+        return res.status(204).json({
+            "detail": "employee not found."
+        })
+    }
+    if (req.body?.firstName) employee.firstName = req.body.firstName
+    if (req.body?.lastName) employee.lastName = req.body.lastName
+
+    const result = await employee.save()
+
+    res.json(result)
+}
+
+const remove = async (req, res) => {
+    if(!req?.params?.id) return res.status(400).json({
+        'detail': 'id must be set.'
+    })
+
+    const employee = await Employee.findOne({ _id : req.params.id }).exec()
 
     if (!employee) {
         return res.status(404).json({
             "detail": "employee not found."
         })
     }
-    employee.first_name = req.body.first_name
-    employee.last_name = req.body.last_name
 
-    res.json(employees.at(req.params.id - 1))
+    const result = await employee.deleteOne({ _id : req.params.id})
+
+    res.json(result)
 }
 
-const remove = (req, res) => {
-    const employee = employees.find((employee) => employee.id == parseInt(req.params.id))
+const retrieve = async (req, res) => {
+    if(!req?.params?.id) return res.status(400).json({
+        'detail': 'id must be set.'
+    })
+    const employee = await Employee.findOne({ _id :  req.params.id }).exec()
+    
     if (!employee) {
         return res.status(404).json({
             "detail": "employee not found."
         })
     }
 
-    const filteredArray = employees.filter((employee) => employee.id != parseInt(req.params.id))
-    employees = filteredArray
-    res.json(employees)
-}
-
-const retrieve = (req, res) => {
-    const employee = employees.find((employee) => employee.id == parseInt(req.params.id))
-    if (!employee) {
-        return res.status(404).json({
-            "detail": "employee not found."
-        })
-    }
     res.json(employee)
 }
 

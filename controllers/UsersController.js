@@ -2,15 +2,6 @@ const User = require('../models/User')
 const bcrypt = require("bcrypt")
 const jwt = require("jsonwebtoken")
 
-const permissions = require('../config/permissions')
-
-const users = {
-    data: require("../models/users.json"),
-    setUsers: function(data) {
-        this.data = data
-    } 
-}
-
 const create = async (req, res) => {
     const { username, password, fullname, email, gender } = req.body
 
@@ -49,9 +40,12 @@ const login = async (req, res) => {
         return res.status(400).json({"detail": "username, password are required."})
     }
 
-    const user = users.data.find((user) => user.username == username)
+    const user = await User.findOne({ username: username }).exec()
 
     if (!user) return res.sendStatus(401)
+
+    console.log(password)
+    console.log(user)
 
     aMatch = await bcrypt.compare(password, user.password)
 
@@ -66,7 +60,7 @@ const login = async (req, res) => {
         },
         secretOrPrivateKey=process.env.ACCESS_TOKEN_SECRET,
         {
-            expiresIn: "30s"
+            expiresIn: "3600s"
         }
     )
 
@@ -78,27 +72,29 @@ const login = async (req, res) => {
         }
     )
 
-    const otherUsers = users.data.filter((other) => other.username != user.username)
-    const userWithRefreshToken = {...user, refreshToken}
+    // const otherUsers = users.data.filter((other) => other.username != user.username)
+    // const userWithRefreshToken = {...user, refreshToken}
 
-    users.setUsers([...otherUsers, userWithRefreshToken])
-    await fsPromises.writeFile(
-        path.join(__dirname, "..", "models", "users.json"),
-        JSON.stringify(users.data)
-    )
+    // users.setUsers([...otherUsers, userWithRefreshToken])
+    // await fsPromises.writeFile(
+    //     path.join(__dirname, "..", "models", "users.json"),
+    //     JSON.stringify(users.data)
+    // )
+    user.refreshToken = refreshToken
+    const result = await user.save()
+    console.log(result);
     
-    res.cookie("jwt", refreshToken, {httpOnly: true, maxAge: 24 * 60 * 60 * 1000, secure: true, sameSite: 'None'})
+    res.cookie("jwt", refreshToken, {httpOnly: true, maxAge: 24 * 60 * 60 * 1000, sameSite: 'None'})
     res.json({...user, accessToken})
 }
 
-function refreshToken(req, res) {
+const refreshToken = async (req, res) => {
     const cookies = req.cookies
 
     if (!cookies?.jwt) return res.sendStatus(401) // unauthorized
 
     const refreshToken = cookies.jwt
-
-    const user = users.data.find((user) => user.refreshToken == refreshToken)
+    const user = await User.findOne({refreshToken}).exec()
 
     if (!user) return res.sendStatus(403) // forbidden
 
@@ -116,7 +112,7 @@ function refreshToken(req, res) {
                 },
                 process.env.ACCESS_TOKEN_SECRET,
                 {
-                    'expiresIn': '30s'
+                    'expiresIn': '3600s'
                 }
             )
             res.json({'accessToken': accessToken})
@@ -130,7 +126,7 @@ const logout = async (req, res) => {
     if (!cookies?.jwt) return res.sendStatus(204) // no content
 
     const refreshToken = cookies.jwt
-    const user = users.data.find((user) => user.refreshToken == refreshToken)
+    const user = await User.findOne({refreshToken}).exec()
 
     if (!user){
         res.clearCookie('jwt', {
@@ -142,14 +138,17 @@ const logout = async (req, res) => {
         return res.sendStatus(204)
     }
 
-    const otherUsers = users.data.filter((other) => other.refreshToken != user.refreshToken)
-    const user_payload = {...user, refreshToken: ''}
-    users.setUsers([...otherUsers, user_payload])
+    // const otherUsers = users.data.filter((other) => other.refreshToken != user.refreshToken)
+    // const user_payload = {...user, refreshToken: ''}
+    // users.setUsers([...otherUsers, user_payload])
 
-    await fsPromises.writeFile(
-        path.join(__dirname, "..", "models", "users.json"),
-        JSON.stringify(users.data)
-    )
+    // await fsPromises.writeFile(
+    //     path.join(__dirname, "..", "models", "users.json"),
+    //     JSON.stringify(users.data)
+    // )
+    user.refreshToken = ''
+    const result = await user.save()
+    console.log(result)
 
     res.clearCookie('jwt', {
         httpOnly: true,
